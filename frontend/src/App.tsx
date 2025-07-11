@@ -1,11 +1,15 @@
 import { useState } from "react";
 
+import WebSocketClient from "./socket/WebsocketClient";
+
 import "./App.css";
 
 function App() {
-	const [count, setCount] = useState(0);
-
-	return <></>;
+	return (
+		<div>
+			<WebSocketClient />
+		</div>
+	);
 }
 
 export default App;
