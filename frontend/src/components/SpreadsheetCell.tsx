@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
+import { SpreadsheetContext } from "../context/SpreadsheetContext";
 
 type SpreadsheetCellProps = {
 	value: string;
@@ -62,4 +63,31 @@ function SpreadsheetCell({
 		/>
 	);
 }
-export default React.memo(SpreadsheetCell);
+
+function MemoizedSpreadsheetCellWrapper({
+	rowIndex,
+	colId,
+}: {
+	rowIndex: number;
+	colId: string;
+}) {
+	const { data, setData, selectedCell, setSelectedCell, handleArrowKeyNav } =
+		useContext(SpreadsheetContext);
+
+	return (
+		<SpreadsheetCell
+			value={data[rowIndex][colId]}
+			isSelected={selectedCell?.row === rowIndex && selectedCell?.col === colId}
+			onChange={(newValue) => {
+				const updatedRow = { ...data[rowIndex], [colId]: newValue };
+				const newData = [...data];
+				newData[rowIndex] = updatedRow;
+				setData(newData);
+			}}
+			onKeyDown={(e) => handleArrowKeyNav(e, rowIndex, colId)}
+			onClick={() => setSelectedCell({ row: rowIndex, col: colId })}
+		/>
+	);
+}
+
+export default React.memo(MemoizedSpreadsheetCellWrapper);
