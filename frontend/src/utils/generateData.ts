@@ -1,14 +1,10 @@
 export const generateSheetData = () => {
-	const data = [];
-
-	for (let row = 0; row < 100; row++) {
-		const rowData: Record<string, string> = {};
-		for (let col = 0; col < 26; col++) {
-			const colKey = String.fromCharCode(65 + col); // 'A' to 'Z'
-			rowData[colKey] = "";
+	return Array.from({ length: 100 }, (_, i) => {
+		const row: any = { id: i }; // <== Add ID here
+		for (let j = 0; j < 26; j++) {
+			const colKey = String.fromCharCode(65 + j);
+			row[colKey] = ""; // or initial value
 		}
-		data.push(rowData);
-	}
-
-	return data;
+		return row;
+	});
 };

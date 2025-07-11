@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useCallback } from "react";
 import {
 	type ColumnDef,
+	type SortingState,
 	flexRender,
 	getCoreRowModel,
+	getSortedRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
 import MemoizedSpreadsheetCellWrapper from "./SpreadsheetCell";
@@ -10,28 +12,28 @@ import MemoizedSpreadsheetCellWrapper from "./SpreadsheetCell";
 import { generateSheetData } from "../utils/generateData";
 import { SpreadsheetContext } from "../context/SpreadsheetContext";
 
-type SelectedCell = { row: number; col: string };
+type SelectedCell = { rowId: number; col: string };
 
 const Spreadsheet = () => {
 	const initialData = useMemo(() => generateSheetData(), []);
 	const [data, setData] = useState(initialData);
 	const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
+	const [sorting, setSorting] = useState<SortingState>([]);
 
 	const handleArrowKeyNav = useCallback(
 		(event: React.KeyboardEvent, row: number, col: string) => {
-			console.log(row, col);
-			const currentRow = row;
+			const currentRowIndex = data.findIndex((r) => r.id === row);
 			const currentCol = col.charCodeAt(0) - 65;
 
-			let newRow = currentRow;
+			let newRow = currentRowIndex;
 			let newCol = currentCol;
 
 			switch (event.key) {
 				case "ArrowDown":
-					newRow = Math.min(currentRow + 1, data.length - 1);
+					newRow = Math.min(currentRowIndex + 1, data.length - 1);
 					break;
 				case "ArrowUp":
-					newRow = Math.max(currentRow - 1, 0);
+					newRow = Math.max(currentRowIndex - 1, 0);
 					break;
 				case "ArrowRight":
 				case "Tab":
@@ -41,15 +43,19 @@ const Spreadsheet = () => {
 					newCol = Math.max(currentCol - 1, 0);
 					break;
 				case "Enter":
-					newRow = Math.min(currentRow + 1, data.length - 1);
+					newRow = Math.min(currentRowIndex + 1, data.length - 1);
 					break;
 				default:
 					return;
 			}
 
 			event.preventDefault();
-			console.log(newRow, String.fromCharCode(65 + newCol));
-			setSelectedCell({ row: newRow, col: String.fromCharCode(65 + newCol) });
+
+			const newRowId = data[newRow].id;
+			setSelectedCell({
+				rowId: newRowId,
+				col: String.fromCharCode(65 + newCol),
+			});
 		},
 		[data.length]
 	);
@@ -60,52 +66,47 @@ const Spreadsheet = () => {
 				const colKey = String.fromCharCode(65 + i); // A-Z
 				return {
 					accessorKey: colKey,
-					header: () => colKey,
-					cell: ({ row, column }) => {
-						const rowIndex = row.index;
-						const colId = column.id;
-						if (rowIndex === selectedCell?.row && selectedCell.col === colId)
-							console.log(
-								rowIndex,
-								colId,
-								selectedCell?.row,
-								selectedCell?.col
-							);
+					sortingFn: (rowA, rowB, columnId) => {
+						const a = parseFloat(rowA.getValue(columnId) || "0");
+						const b = parseFloat(rowB.getValue(columnId) || "0");
+						return a - b;
+					},
+					header: ({ column }) => {
+						const isSorted = column.getIsSorted();
 						return (
-							<MemoizedSpreadsheetCellWrapper
-								rowIndex={rowIndex}
-								colId={colId}
-							/>
-							// <SpreadsheetCell
-							// 	value={data[rowIndex][colId]}
-							// 	isSelected={
-							// 		selectedCell?.row === rowIndex && selectedCell?.col === colId
-							// 	}
-							// 	onChange={(newValue) => {
-							// 		if (data[rowIndex][colId] !== newValue) {
-							// 			const updatedRow = { ...data[rowIndex], [colId]: newValue };
-							// 			const newData = [...data];
-							// 			newData[rowIndex] = updatedRow;
-							// 			setData(newData);
-							// 		}
-							// 	}}
-							// 	onKeyDown={(e) => handleArrowKeyNav(e, rowIndex, colId)}
-							// 	onClick={() => {
-							// 		console.log("Clicked row and column", rowIndex, colId);
-							// 		setSelectedCell({ row: rowIndex, col: colId });
-							// 	}}
-							// />
+							<div
+								onClick={() => column.toggleSorting(isSorted === "asc")}
+								className="cursor-pointer flex items-center gap-1"
+							>
+								{colKey}
+								{isSorted === "asc" && <span>▲</span>}
+								{isSorted === "desc" && <span>▼</span>}
+								{!isSorted && <span className="opacity-20">↕</span>}
+							</div>
 						);
+					},
+					enableSorting: true,
+					cell: ({ row, column }) => {
+						//const rowIndex = row.index;
+						const colId = column.id;
+
+						return <MemoizedSpreadsheetCellWrapper row={row} colId={colId} />;
 					},
 				};
 			}),
-		[]
+		[data]
 	);
 
 	const table = useReactTable({
 		data,
 		columns,
+		state: {
+			sorting,
+		},
+		getRowId: (row) => row.id,
+		onSortingChange: setSorting,
 		getCoreRowModel: getCoreRowModel(),
+		getSortedRowModel: getSortedRowModel(),
 	});
 
 	return (
@@ -143,7 +144,7 @@ const Spreadsheet = () => {
 						))}
 					</thead>
 					<tbody>
-						{table.getRowModel().rows.map((row, rowIndex) => (
+						{table.getSortedRowModel().rows.map((row, rowIndex) => (
 							<tr key={row.id}>
 								<td className="sticky left-0 bg-gray-50 border border-gray-300 px-2 font-mono">
 									{rowIndex + 1}
