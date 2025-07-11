@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
 	type ColumnDef,
 	flexRender,
@@ -9,9 +9,50 @@ import SpreadsheetCell from "./SpreadsheetCell";
 
 import { generateSheetData } from "../utils/generateData";
 
+type SelectedCell = { row: number; col: string };
+
 const Spreadsheet = () => {
 	const initialData = useMemo(() => generateSheetData(), []);
 	const [data, setData] = useState(initialData);
+	const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
+
+	const handleArrowKeyNav = (
+		event: React.KeyboardEvent,
+		row: number,
+		col: string
+	) => {
+		console.log(row, col);
+		const currentRow = row;
+		const currentCol = col.charCodeAt(0) - 65;
+
+		let newRow = currentRow;
+		let newCol = currentCol;
+
+		switch (event.key) {
+			case "ArrowDown":
+				newRow = Math.min(currentRow + 1, data.length - 1);
+				break;
+			case "ArrowUp":
+				newRow = Math.max(currentRow - 1, 0);
+				break;
+			case "ArrowRight":
+			case "Tab":
+				newCol = Math.min(currentCol + 1, 25);
+				break;
+			case "ArrowLeft":
+				newCol = Math.max(currentCol - 1, 0);
+				break;
+			case "Enter":
+				newRow = Math.min(currentRow + 1, data.length - 1);
+				break;
+			default:
+				return;
+		}
+
+		event.preventDefault();
+		console.log(newRow, String.fromCharCode(65 + newCol));
+		setSelectedCell({ row: newRow, col: String.fromCharCode(65 + newCol) });
+	};
 
 	const columns = useMemo<ColumnDef<unknown>[]>(
 		() =>
@@ -23,13 +64,28 @@ const Spreadsheet = () => {
 					cell: ({ row, column }) => {
 						const rowIndex = row.index;
 						const colId = column.id;
+						if (rowIndex === selectedCell?.row && selectedCell.col === colId)
+							console.log(
+								rowIndex,
+								colId,
+								selectedCell?.row,
+								selectedCell?.col
+							);
 						return (
 							<SpreadsheetCell
 								value={data[rowIndex][colId]}
+								isSelected={
+									selectedCell?.row === rowIndex && selectedCell?.col === colId
+								}
 								onChange={(newValue) => {
 									const newData = [...data];
 									newData[rowIndex][colId] = newValue;
 									setData(newData);
+								}}
+								onKeyDown={(e) => handleArrowKeyNav(e, rowIndex, colId)}
+								onClick={() => {
+									console.log("Clicked row and column", rowIndex, colId);
+									setSelectedCell({ row: rowIndex, col: colId });
 								}}
 							/>
 						);
