@@ -3,6 +3,7 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import Spreadsheet from "./components/Spreadsheet";
 
 import "./App.css";
+import { SpreadsheetV2 } from "./components/SpreadsheetV2";
 
 function App() {
 	const { isConnected, lastMessage, send } = useWebSocket(
@@ -22,7 +23,7 @@ function App() {
 				<p>Status: {isConnected ? "🟢 Connected" : "🔴 Disconnected"}</p>
 				<p>Last Message: {lastMessage}</p>
 			</div>
-			<Spreadsheet />
+			<SpreadsheetV2 />
 		</div>
 	);
 }

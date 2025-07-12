@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
 	type ColumnDef,
 	type SortingState,
@@ -67,9 +67,42 @@ const Spreadsheet = () => {
 				return {
 					accessorKey: colKey,
 					sortingFn: (rowA, rowB, columnId) => {
-						const a = parseFloat(rowA.getValue(columnId) || "0");
-						const b = parseFloat(rowB.getValue(columnId) || "0");
-						return a - b;
+						console.log(sorting);
+						// if (!rowA.getValue(columnId) && rowB.getValue(columnId)) {
+						// 	console.log("rowA", rowA.getValue(columnId));
+						// 	console.log("rowB", rowB.getValue(columnId));
+						// }
+
+						// const a = rowA.original as string | number | null | undefined;
+						// const b = rowB.original as string | number | null | undefined;
+						const a = rowA.getValue(columnId);
+						const b = rowB.getValue(columnId);
+
+						// Empty cells go last in ascending
+						// const isEmptyA = a === null || a === undefined || a === "";
+						// const isEmptyB = b === null || b === undefined || b === "";
+
+						// if (isEmptyA && isEmptyB) return 0;
+
+						// if (isEmptyB) {
+						// 	console.log("A:B--", a, "--", b);
+						// 	return 1;
+						// } // `b` should come *after* `a`
+						// if (isEmptyA) {
+						// 	console.log("A:B--", a, "--", b);
+						// 	return -1;
+						// } // `a` should come *after* `b`
+
+						// // Try numeric comparison first
+						// const numA = typeof a === "number" ? a : parseFloat(String(a));
+						// const numB = typeof b === "number" ? b : parseFloat(String(b));
+						// const isNumA = !isNaN(numA);
+						// const isNumB = !isNaN(numB);
+
+						// if (isNumA && isNumB) return numA - numB;
+
+						// Fallback to string comparison
+						return String(a).localeCompare(String(b));
 					},
 					header: ({ column }) => {
 						const isSorted = column.getIsSorted();
@@ -87,14 +120,14 @@ const Spreadsheet = () => {
 					},
 					enableSorting: true,
 					cell: ({ row, column }) => {
-						//const rowIndex = row.index;
+						const rowIndex = row.index;
 						const colId = column.id;
-
+						// console.log(rowIndex, colId);
 						return <MemoizedSpreadsheetCellWrapper row={row} colId={colId} />;
 					},
 				};
 			}),
-		[data]
+		[]
 	);
 
 	const table = useReactTable({
@@ -103,11 +136,15 @@ const Spreadsheet = () => {
 		state: {
 			sorting,
 		},
-		getRowId: (row) => row.id,
+		// getRowId: (row) => row.id,
 		onSortingChange: setSorting,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 	});
+
+	// useEffect(() => {
+	// 	console.log("Sorting", table.getCoreRowModel());
+	// }, [sorting]);
 
 	return (
 		<div className="overflow-auto max-w-screen bg-white border">
@@ -147,7 +184,7 @@ const Spreadsheet = () => {
 						{table.getSortedRowModel().rows.map((row, rowIndex) => (
 							<tr key={row.id}>
 								<td className="sticky left-0 bg-gray-50 border border-gray-300 px-2 font-mono">
-									{rowIndex + 1}
+									{row.index}
 								</td>
 								{row.getVisibleCells().map((cell) => (
 									<td key={cell.id} className="border border-gray-300 px-1">

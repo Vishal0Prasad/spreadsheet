@@ -17,7 +17,6 @@ function SpreadsheetCell({
 	onKeyDown,
 	onClick,
 }: SpreadsheetCellProps) {
-	if (value) console.log("Local Value", value);
 	const [localValue, setLocalValue] = useState(value);
 	const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -41,10 +40,6 @@ function SpreadsheetCell({
 			inputRef.current?.select(); // optional: select all text
 		}
 	}, [isSelected]);
-
-	// useEffect(() => {
-	// 	console.log("Render:", { value, isSelected });
-	// }, [value, isSelected]);
 
 	return (
 		<input
@@ -74,17 +69,10 @@ function MemoizedSpreadsheetCellWrapper({
 }) {
 	const { data, setData, selectedCell, setSelectedCell, handleArrowKeyNav } =
 		useContext(SpreadsheetContext);
-	// const rowIndex = row.index;
-	// const rawValue = row.getValue(colId) ?? "";
-	// const value =
-	// 	rawValue === undefined || rawValue === null ? "" : String(rawValue);
-	// // if (value) {
-	// // 	console.log("Render cell:", row.id, colId, value);
-	// // }
-	// // Find the actual index of this row in `data`
-	// const originalIndex = data.findIndex((r) => r === row.original);
+
 	const rowId = row.original.id;
-	const value = String(row.getValue(colId) ?? "");
+	const currentRow = data.find((r) => r.id === row.original.id);
+	const value = String(currentRow?.[colId] ?? "");
 	const isSelected =
 		selectedCell?.rowId === rowId && selectedCell?.col === colId;
 	return (
