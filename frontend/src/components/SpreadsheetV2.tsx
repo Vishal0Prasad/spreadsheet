@@ -14,13 +14,17 @@ export const SpreadsheetV2 = () => {
 	const onFocusCell = (colId: string, rowId: number, inst?: string) => {
 		const cell = document.getElementById(`${colId}-${rowId}`);
 		cell?.focus();
-		const [op, classNames] = inst?.split(":") || [];
-		if (op === "add") {
-			cell?.classList.add(classNames);
-		}
-		if (op === "remove") {
-			cell?.classList.remove(classNames);
-		}
+		// if (cell){
+		//      cell.style.outline = "blue";
+		//      cell.style
+		// }
+		// const [op, classNames] = inst?.split(":") || [];
+		// if (op === "add") {
+		// 	cell?.classList.add(classNames);
+		// }
+		// if (op === "remove") {
+		// 	cell?.classList.remove(classNames);
+		// }
 	};
 
 	const handleArrowNavigation = (key: string, rowId: string, colId: string) => {
@@ -53,7 +57,14 @@ export const SpreadsheetV2 = () => {
 
 	return (
 		<div>
-			<table className="min-w-full border-collapse table-auto text-sm">
+			<table className="w-full border-collapse table-fixed text-sm">
+				<colgroup>
+					<col span={1} className="w-[50px]"></col>
+					<col
+						span={columns.length}
+						className="w-[120px] h-[32px] border-box"
+					></col>
+				</colgroup>
 				<thead className="bg-gray-100 sticky top-0 z-10">
 					<tr key={"header"}>
 						<th className="sticky left-0 bg-gray-100 border border-gray-300 text-left px-2">
@@ -63,7 +74,7 @@ export const SpreadsheetV2 = () => {
 							return (
 								<th
 									key={`header-${index}`}
-									className="border border-gray-300 px-2 py-1 text-left"
+									className="sticky top-0 border border-gray-300 px-2 py-1 text-left"
 								>
 									{col}
 								</th>
