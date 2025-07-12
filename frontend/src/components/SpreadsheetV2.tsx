@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { SpreadsheetCellV2 } from "./SpreadsheetCellV2";
 
+type SortingState = { [column: string]: "" | "asc" | "desc" };
+type DataState = Record<string, string>;
+
 export const SpreadsheetV2 = () => {
 	const [rows, setRows] = useState(
 		Array.from({ length: 100 }, (_, index) => index)
@@ -9,22 +12,13 @@ export const SpreadsheetV2 = () => {
 		String.fromCharCode(65 + index)
 	);
 
-	const [data, setData] = useState([]);
+	const [data, setData] = useState<DataState>({});
+	const [sortedData, setSortedData] = useState([]);
+	const [sorting, setSorting] = useState<SortingState>({});
 
 	const onFocusCell = (colId: string, rowId: number, inst?: string) => {
 		const cell = document.getElementById(`${colId}-${rowId}`);
 		cell?.focus();
-		// if (cell){
-		//      cell.style.outline = "blue";
-		//      cell.style
-		// }
-		// const [op, classNames] = inst?.split(":") || [];
-		// if (op === "add") {
-		// 	cell?.classList.add(classNames);
-		// }
-		// if (op === "remove") {
-		// 	cell?.classList.remove(classNames);
-		// }
 	};
 
 	const handleArrowNavigation = (key: string, rowId: string, colId: string) => {
@@ -34,7 +28,6 @@ export const SpreadsheetV2 = () => {
 		let newRow = row;
 		let newCol = col;
 
-		// console.log(newRow, colId);
 		switch (key) {
 			case "ArrowDown":
 				newRow = Math.min(newRow + 1, rows.length - 1);
@@ -53,6 +46,25 @@ export const SpreadsheetV2 = () => {
 				return;
 		}
 		onFocusCell(columns[newCol], newRow);
+	};
+
+	const handleSort = (col: string) => {
+		if (!sorting?.[col])
+			setSorting((prev) => ({
+				...prev,
+				[col]: "asc",
+			}));
+		else if (sorting?.[col] === "asc")
+			setSorting((prev) => ({
+				...prev,
+				[col]: "desc",
+			}));
+		else {
+			setSorting((prev) => ({
+				...prev,
+				[col]: "asc",
+			}));
+		}
 	};
 
 	return (
@@ -74,9 +86,37 @@ export const SpreadsheetV2 = () => {
 							return (
 								<th
 									key={`header-${index}`}
+									id={`header-${col}`}
 									className="sticky top-0 border border-gray-300 px-2 py-1 text-left"
 								>
-									{col}
+									<div className="flex justify-center items-center relative">
+										<span>{col}</span>
+										{!sorting?.[col] ? (
+											<span
+												className="cursor-pointer absolute right-0"
+												onClick={() => handleSort(col)}
+											>
+												<img width={6} height={6} src="/up-arrow.png" />
+												<img
+													width={6}
+													height={6}
+													src="/up-arrow.png"
+													className="rotate-180"
+												/>
+											</span>
+										) : (
+											<img
+												src="/up-arrow.png"
+												width={10}
+												height={10}
+												alt="sort icon"
+												onClick={() => handleSort(col)}
+												className={`absolute right-0 cursor-pointer transition-transform duration-200 ${
+													sorting[col] === "desc" ? "rotate-180" : ""
+												}`}
+											/>
+										)}
+									</div>
 								</th>
 							);
 						})}
@@ -88,6 +128,7 @@ export const SpreadsheetV2 = () => {
 							<tr key={`row-${index}`}>
 								<td
 									key={`sider-${index}`}
+									id={`sider-${row}`}
 									className="sticky left-0 bg-gray-50 border border-gray-300 px-2 font-mono"
 								>
 									{index + 1}
@@ -99,6 +140,7 @@ export const SpreadsheetV2 = () => {
 											colId={col}
 											onKeyDown={handleArrowNavigation}
 											onFocusCell={onFocusCell}
+											setData={setData}
 										/>
 									);
 								})}
