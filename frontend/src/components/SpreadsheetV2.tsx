@@ -1,4 +1,10 @@
 import React, { useState } from "react";
+
+import {
+	sparseToDenseFormat,
+	denseToSparseFormat,
+	sortRowsByColumn,
+} from "../utils/data";
 import { SpreadsheetCellV2 } from "./SpreadsheetCellV2";
 
 type SortingState = { [column: string]: "" | "asc" | "desc" };
@@ -48,22 +54,32 @@ export const SpreadsheetV2 = () => {
 		onFocusCell(columns[newCol], newRow);
 	};
 
+	const applySortLocally = (column: string, ascending: boolean) => {
+		const denseRows = sparseToDenseFormat(data, columns, rows.length);
+		const sortedRows = sortRowsByColumn(denseRows, column, ascending);
+		const newSparse = denseToSparseFormat(sortedRows, columns);
+		setData(newSparse);
+	};
+
 	const handleSort = (col: string) => {
-		if (!sorting?.[col])
+		if (!sorting?.[col]) {
 			setSorting((prev) => ({
 				...prev,
 				[col]: "asc",
 			}));
-		else if (sorting?.[col] === "asc")
+			applySortLocally("col", true);
+		} else if (sorting?.[col] === "asc") {
 			setSorting((prev) => ({
 				...prev,
 				[col]: "desc",
 			}));
-		else {
+			applySortLocally("col", false);
+		} else {
 			setSorting((prev) => ({
 				...prev,
 				[col]: "asc",
 			}));
+			applySortLocally("col", true);
 		}
 	};
 

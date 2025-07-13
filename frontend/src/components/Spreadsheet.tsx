@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-table";
 import MemoizedSpreadsheetCellWrapper from "./SpreadsheetCell";
 
-import { generateSheetData } from "../utils/generateData";
+import { generateSheetData } from "../utils/data";
 import { SpreadsheetContext } from "../context/SpreadsheetContext";
 
 type SelectedCell = { rowId: number; col: string };
