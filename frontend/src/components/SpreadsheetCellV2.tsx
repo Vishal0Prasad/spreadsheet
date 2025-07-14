@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 
+const FORMULAS = ["SUM", "AVERAGE", "COUNT"];
+
 export const SpreadsheetCellV2 = ({
 	rowId,
 	colId,
@@ -7,6 +9,10 @@ export const SpreadsheetCellV2 = ({
 	onFocusCell,
 	updateCellData,
 	fetchCellData,
+	liveCursors,
+	handleFocusCell,
+	lastMessage,
+	myUserId,
 }: {
 	rowId: number;
 	colId: string;
@@ -14,21 +20,38 @@ export const SpreadsheetCellV2 = ({
 	onFocusCell: (colId: string, rowId: number, inst?: string) => void;
 	updateCellData: (col: string, row: number, value: string) => void;
 	fetchCellData: (col: string, row: number) => string;
+	liveCursors: any;
+	handleFocusCell: any;
+	lastMessage: string;
+	myUserId: string;
 }) => {
-	const [_, setLocalValue] = useState("");
+	const [, setLocalValue] = useState("");
 	const [editing, setEditing] = useState(false);
+	const [showFormulaSuggestions, setShowFormulaSuggestions] = useState(false);
+	const [formulae, setFormulae] = useState([...FORMULAS]);
 
 	const tdRef = useRef<HTMLTableCellElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	console.log(lastMessage);
+	lastMessage = JSON.parse(lastMessage);
 
 	const handleChange = (
 		event: React.ChangeEvent<HTMLInputElement>,
 		colId: string,
 		rowId: number
 	) => {
+		const value = event.target.value;
+
 		// This local value update is only to force re render and call fetchCellData method in the value attribute
-		setLocalValue(event.target.value);
+		setLocalValue(value);
 		updateCellData(colId, rowId, event.target.value);
+		// if (value.startsWith("=")) {
+		// 	const formulaQuery = value.slice(1).toUpperCase();
+		// 	setShowFormulaSuggestions(true);
+		// 	setFormulae([...FORMULAS.filter((f) => f.startsWith(formulaQuery))]);
+		// }
+		// setShowFormulaSuggestions(value.startsWith("="));
 	};
 
 	const handleDoubleClick = () => {
@@ -37,22 +60,19 @@ export const SpreadsheetCellV2 = ({
 
 	const handleKeyDown = (event: React.KeyboardEvent<HTMLTableCellElement>) => {
 		const eventKey = event.key;
+		const col = event.currentTarget.dataset.col;
+		const row = event.currentTarget.dataset.row;
+
 		if (editing && eventKey !== "Enter") return;
 		if (eventKey === "Enter") {
 			event.preventDefault(); // prevent new line or form submit
 			if (editing) {
 				// Exit edit mode and move to cell below
 				setEditing(false);
-				onFocusCell(
-					event.currentTarget.dataset.col || "A",
-					parseInt(event.currentTarget.dataset?.row || "0") + 1
-				);
+				onFocusCell(col || "A", parseInt(row || "0") + 1);
 			} else {
 				setEditing(true);
-				onFocusCell(
-					event.currentTarget.dataset.col || "A",
-					parseInt(event.currentTarget.dataset?.row || "0")
-				);
+				onFocusCell(col || "A", parseInt(row || "0"));
 			}
 			// Focus input after the input is visible
 			setTimeout(() => {
@@ -66,6 +86,18 @@ export const SpreadsheetCellV2 = ({
 			);
 		}
 	};
+
+	const handleFormulaClick = (formula: string) => {
+		const newValue = `=${formula}()`;
+		setLocalValue(newValue);
+		updateCellData(colId, rowId, newValue);
+		setShowFormulaSuggestions(false);
+		setTimeout(() => {
+			inputRef.current?.focus();
+		}, 0);
+	};
+
+	console.log("live cursors", lastMessage?.userId, myUserId);
 
 	useEffect(() => {
 		if (editing && tdRef.current) {
@@ -87,7 +119,7 @@ export const SpreadsheetCellV2 = ({
 			data-row={rowId}
 			data-col={colId}
 			tabIndex={0}
-			className={`border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 z-40`}
+			className={`relative border border-gray-300 focus:outline focus:ring-2 focus:ring-blue-400`}
 			onKeyDown={handleKeyDown}
 			onDoubleClick={handleDoubleClick}
 		>
@@ -97,7 +129,13 @@ export const SpreadsheetCellV2 = ({
 					autoFocus
 					value={fetchCellData(colId, rowId) ?? ""}
 					className="w-full h-full p-0 m-0 px-1 border-none outline-none bg-transparent"
-					onBlur={() => setEditing(false)}
+					onBlur={() => {
+						// setTimeout(() => {
+						setEditing(false);
+						// setShowFormulaSuggestions(false);
+						// }, 100);
+					}}
+					// onClick={() => handleFocusCell(colId, rowId)}
 					onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
 						handleChange(e, colId, rowId);
 					}}
@@ -113,6 +151,33 @@ export const SpreadsheetCellV2 = ({
 					{fetchCellData(colId, rowId)}
 				</span>
 			)}
+			{/* {showFormulaSuggestions && (
+				<div className="absolute left-0 top-full mt-1 w-max bg-white border border-gray-300 z-0 shadow rounded text-sm">
+					{formulae.map((f) => (
+						<div
+							key={f}
+							className="px-2 py-1 hover:bg-blue-300 cursor-pointer border-b-2"
+							//onMouseDown={(e) => e.preventDefault()}
+							//onClick={() => handleFormulaClick(f)}
+						>
+							={f}(...)
+						</div>
+					))}
+				</div>
+			)} */}
+			{myUserId != lastMessage?.userId &&
+				(lastMessage?.cell?.row === rowId &&
+				lastMessage?.cell?.col === colId ? (
+					<div
+						key={lastMessage?.userId}
+						className="absolute top-0 left-0 w-full h-full border-2"
+						style={{ borderColor: lastMessage?.color }}
+					>
+						<span className="text-xs bg-white px-1 text-black">
+							{lastMessage?.name}
+						</span>
+					</div>
+				) : null)}
 		</td>
 	);
 };

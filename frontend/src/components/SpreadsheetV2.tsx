@@ -1,14 +1,22 @@
-import React, { useReducer, useRef, useState } from "react";
-
+import React, { useEffect, useReducer, useRef, useState } from "react";
+import { v1 } from "uuid";
 import {
 	sparseToDenseFormat,
 	denseToSparseFormat,
 	sortRowsByColumn,
 } from "../utils/data";
 import { SpreadsheetCellV2 } from "./SpreadsheetCellV2";
+import { useWebSocket } from "../hooks/useWebSocket";
+import { useUser } from "../hooks/useUser";
 
 type SortingState = { [column: string]: "" | "asc" | "desc" };
 type DataState = Record<string, string>;
+type UserSelection = {
+	userId: string;
+	name: string;
+	color: string;
+	cell: { row: number; col: string }; // e.g., { row: 4, col: "B" }
+};
 
 export const SpreadsheetV2 = () => {
 	const [rows, setRows] = useState(
@@ -17,16 +25,32 @@ export const SpreadsheetV2 = () => {
 	const columns = Array.from({ length: 26 }, (_, index) =>
 		String.fromCharCode(65 + index)
 	);
-
 	const dataRef = useRef<DataState>({});
-	//const [sortedData, setSortedData] = useState([]);
+
+	const [liveCursors, setLiveCursors] = useState<Record<string, UserSelection>>(
+		{}
+	);
 	const [sorting, setSorting] = useState<SortingState>({});
+	const { send, lastMessage } = useWebSocket();
+	const { id, name } = useUser();
 	const [, rerender] = useReducer((x) => x + 1, 0);
 	const forceUpdate = rerender;
+	// const myUserId = v1();
 
 	const onFocusCell = (colId: string, rowId: number) => {
 		const cell = document.getElementById(`${colId}-${rowId}`);
 		cell?.focus();
+	};
+
+	const handleFocusCell = (colId: string, rowId: number) => {
+		const message = {
+			type: "cursor",
+			userId: id, // generate per user/session
+			name: name,
+			color: "#f43f5e",
+			cell: { row: rowId, col: colId },
+		};
+		send(message);
 	};
 
 	const handleArrowNavigation = (key: string, rowId: string, colId: string) => {
@@ -54,6 +78,7 @@ export const SpreadsheetV2 = () => {
 				return;
 		}
 		onFocusCell(columns[newCol], newRow);
+		handleFocusCell(columns[newCol], newRow);
 	};
 
 	const updateData = (col: string, row: number, value: string) => {
@@ -103,6 +128,22 @@ export const SpreadsheetV2 = () => {
 			applySortLocally(col, true);
 		}
 	};
+
+	// useEffect(() => {
+	// 	if (!lastMessage) return;
+	// 	try {
+	// 		const msg = JSON.parse(lastMessage);
+	// 		console.log(msg);
+	// 		if (msg.type === "cursor") {
+	// 			setLiveCursors((prev) => ({
+	// 				...prev,
+	// 				[msg.userId]: msg, // userId must be unique per user
+	// 			}));
+	// 		}
+	// 	} catch (e) {
+	// 		console.warn("Invalid WS message", lastMessage);
+	// 	}
+	// }, [lastMessage]);
 
 	return (
 		<div>
@@ -180,6 +221,10 @@ export const SpreadsheetV2 = () => {
 											onFocusCell={onFocusCell}
 											updateCellData={updateData}
 											fetchCellData={fetchCellData}
+											liveCursors={liveCursors}
+											handleFocusCell={handleFocusCell}
+											lastMessage={lastMessage || "null"}
+											myUserId={id}
 										/>
 									);
 								})}
