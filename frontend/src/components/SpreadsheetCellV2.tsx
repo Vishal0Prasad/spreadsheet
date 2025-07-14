@@ -1,25 +1,21 @@
-import React, {
-	useState,
-	useEffect,
-	useRef,
-	type SetStateAction,
-	type Dispatch,
-} from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export const SpreadsheetCellV2 = ({
 	rowId,
 	colId,
 	onKeyDown,
 	onFocusCell,
-	setData,
+	updateCellData,
+	fetchCellData,
 }: {
 	rowId: number;
 	colId: string;
 	onKeyDown: (key: string, rowId: string, colId: string) => void;
 	onFocusCell: (colId: string, rowId: number, inst?: string) => void;
-	setData: Dispatch<SetStateAction<Record<string, string>>>;
+	updateCellData: (col: string, row: number, value: string) => void;
+	fetchCellData: (col: string, row: number) => string;
 }) => {
-	const [localValue, setLocalValue] = useState("");
+	const [_, setLocalValue] = useState("");
 	const [editing, setEditing] = useState(false);
 
 	const tdRef = useRef<HTMLTableCellElement>(null);
@@ -30,11 +26,9 @@ export const SpreadsheetCellV2 = ({
 		colId: string,
 		rowId: number
 	) => {
+		// This local value update is only to force re render and call fetchCellData method in the value attribute
 		setLocalValue(event.target.value);
-		setData((prev) => ({
-			...prev,
-			[`${colId}-${rowId}`]: event.target.value,
-		}));
+		updateCellData(colId, rowId, event.target.value);
 	};
 
 	const handleDoubleClick = () => {
@@ -87,13 +81,13 @@ export const SpreadsheetCellV2 = ({
 
 	return (
 		<td
-			ref={tdRef}
 			key={`${colId}-${rowId}`}
+			ref={tdRef}
 			id={`${colId}-${rowId}`}
 			data-row={rowId}
 			data-col={colId}
 			tabIndex={0}
-			className="border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 z-40"
+			className={`border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 z-40`}
 			onKeyDown={handleKeyDown}
 			onDoubleClick={handleDoubleClick}
 		>
@@ -101,19 +95,22 @@ export const SpreadsheetCellV2 = ({
 				<input
 					id={`${colId}_${rowId}`}
 					autoFocus
-					value={localValue}
+					value={fetchCellData(colId, rowId) ?? ""}
 					className="w-full h-full p-0 m-0 px-1 border-none outline-none bg-transparent"
 					onBlur={() => setEditing(false)}
-					onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-						handleChange(e, colId, rowId)
-					}
+					onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+						handleChange(e, colId, rowId);
+					}}
 					style={{
 						boxSizing: "border-box",
 					}}
 				/>
 			) : (
-				<span className="w-full h-full px-1 truncate text-sm">
-					{localValue}
+				<span
+					key={`static-cell-${colId}-${rowId}`}
+					className="w-full h-full px-1 truncate text-sm"
+				>
+					{fetchCellData(colId, rowId)}
 				</span>
 			)}
 		</td>

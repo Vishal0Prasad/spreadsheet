@@ -53,11 +53,31 @@ export function sortRowsByColumn(
 	ascending: boolean = true
 ) {
 	return [...rows].sort((a, b) => {
-		const valA = a[column] || "";
-		const valB = b[column] || "";
+		const valA = a[column]?.trim() ?? "";
+		const valB = b[column]?.trim() ?? "";
 
-		if (valA < valB) return ascending ? -1 : 1;
-		if (valA > valB) return ascending ? 1 : -1;
-		return 0;
+		const isEmptyA = valA === "";
+		const isEmptyB = valB === "";
+
+		// 🟡 Handle empty values explicitly
+		if (isEmptyA && !isEmptyB) return 1;
+		if (!isEmptyA && isEmptyB) return -1;
+		if (isEmptyA && isEmptyB) return 0;
+
+		const numA = Number(valA);
+		const numB = Number(valB);
+
+		const isNumA = !isNaN(numA);
+		const isNumB = !isNaN(numB);
+
+		let result: number = 0;
+
+		if (isNumA && isNumB) {
+			result = numA - numB;
+		} else if (isNumA) result = -1; // numbers before text
+		else if (isNumB) result = 1;
+		else valA.localeCompare(valB);
+
+		return ascending ? result : -result;
 	});
 }

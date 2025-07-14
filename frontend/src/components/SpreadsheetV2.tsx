@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useReducer, useRef, useState } from "react";
 
 import {
 	sparseToDenseFormat,
@@ -18,11 +18,13 @@ export const SpreadsheetV2 = () => {
 		String.fromCharCode(65 + index)
 	);
 
-	const [data, setData] = useState<DataState>({});
-	const [sortedData, setSortedData] = useState([]);
+	const dataRef = useRef<DataState>({});
+	//const [sortedData, setSortedData] = useState([]);
 	const [sorting, setSorting] = useState<SortingState>({});
+	const [, rerender] = useReducer((x) => x + 1, 0);
+	const forceUpdate = rerender;
 
-	const onFocusCell = (colId: string, rowId: number, inst?: string) => {
+	const onFocusCell = (colId: string, rowId: number) => {
 		const cell = document.getElementById(`${colId}-${rowId}`);
 		cell?.focus();
 	};
@@ -54,11 +56,30 @@ export const SpreadsheetV2 = () => {
 		onFocusCell(columns[newCol], newRow);
 	};
 
+	const updateData = (col: string, row: number, value: string) => {
+		const key = `${col}-${row}`;
+
+		if (value.trim()) {
+			dataRef.current[key] = value;
+		} else {
+			delete dataRef.current[key];
+		}
+	};
+
+	const fetchCellData = (col: string, row: number) => {
+		return dataRef.current[`${col}-${row}`];
+	};
+
 	const applySortLocally = (column: string, ascending: boolean) => {
-		const denseRows = sparseToDenseFormat(data, columns, rows.length);
+		const denseRows = sparseToDenseFormat(
+			{ ...dataRef.current },
+			columns,
+			rows.length
+		);
 		const sortedRows = sortRowsByColumn(denseRows, column, ascending);
 		const newSparse = denseToSparseFormat(sortedRows, columns);
-		setData(newSparse);
+		dataRef.current = { ...newSparse };
+		forceUpdate();
 	};
 
 	const handleSort = (col: string) => {
@@ -67,19 +88,19 @@ export const SpreadsheetV2 = () => {
 				...prev,
 				[col]: "asc",
 			}));
-			applySortLocally("col", true);
+			applySortLocally(col, true);
 		} else if (sorting?.[col] === "asc") {
 			setSorting((prev) => ({
 				...prev,
 				[col]: "desc",
 			}));
-			applySortLocally("col", false);
+			applySortLocally(col, false);
 		} else {
 			setSorting((prev) => ({
 				...prev,
 				[col]: "asc",
 			}));
-			applySortLocally("col", true);
+			applySortLocally(col, true);
 		}
 	};
 
@@ -87,13 +108,13 @@ export const SpreadsheetV2 = () => {
 		<div>
 			<table className="w-full border-collapse table-fixed text-sm">
 				<colgroup>
-					<col span={1} className="w-[50px]"></col>
+					<col span={1} className="w-[50px] mr-2"></col>
 					<col
 						span={columns.length}
 						className="w-[120px] h-[32px] border-box"
 					></col>
 				</colgroup>
-				<thead className="bg-gray-100 sticky top-0 z-10">
+				<thead className="bg-gray-100 sticky top-0">
 					<tr key={"header"}>
 						<th className="sticky left-0 bg-gray-100 border border-gray-300 text-left px-2">
 							#
@@ -152,11 +173,13 @@ export const SpreadsheetV2 = () => {
 								{columns.map((col) => {
 									return (
 										<SpreadsheetCellV2
+											key={`${col}-${row}`}
 											rowId={row}
 											colId={col}
 											onKeyDown={handleArrowNavigation}
 											onFocusCell={onFocusCell}
-											setData={setData}
+											updateCellData={updateData}
+											fetchCellData={fetchCellData}
 										/>
 									);
 								})}
